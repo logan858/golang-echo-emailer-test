@@ -63,6 +63,7 @@ func paramsFunc(c echo.Context) error {
 			log.Fatal("Error pinging db: " + err2.Error())
 		}
 
+		fmt.Print(ctx)
 		// get/post/whatever we want to do in a db, with name var here.
 		var result struct {
 			id string
