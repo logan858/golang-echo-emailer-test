@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"database/sql"
@@ -63,24 +64,36 @@ func paramsFunc(c echo.Context) error {
 		log.Fatal("Error pinging db: " + err2.Error())
 	}
 
-	fmt.Print(ctx)
 	// get/post/whatever we want to do in a db, with name var here.
-	var result struct {
-		id string
-	}
-	err = db.QueryRowContext(ctx, `SELECT a.id
+	var lineIDs string
+	lineResults, err := db.QueryContext(ctx, `SELECT odtl.id AS lineIDs
 			FROM ORDER_HDR a
-			WHERE a.numb = @name`, sql.Named("name", name)).Scan(&result.id)
+			LEFT OUTER JOIN ORDER_DTL odtl ON odtl.orderID = a.id
+			WHERE a.numb = @name`, sql.Named("name", name))
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("\n", "id: ", name, "id results: ", result.id)
+	defer lineResults.Close()
+	var allLineIDs []string
+	for lineResults.Next() {
+		err := lineResults.Scan(&lineIDs)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println(lineIDs)
+		allLineIDs = append(allLineIDs, lineIDs)
+	}
+	err = lineResults.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(allLineIDs)
 
 	m := gomail.NewMessage()
 	m.SetHeader("From", emailer)
 	m.SetHeader("To", "lmajor@levelwear.com")
-	m.SetHeader("Subejct", "bliblibli")
-	m.SetBody("text/plain", name)
+	m.SetHeader("Subject", "Order# "+name)
+	m.SetBody("text/plain", "Line IDs: "+"\n"+strings.Join(allLineIDs, "\n"))
 	d := gomail.NewDialer(emailerIP, 25, "", "")
 	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
