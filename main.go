@@ -87,7 +87,6 @@ func paramsFunc(c echo.Context) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(allLineIDs)
 
 	m := gomail.NewMessage()
 	m.SetHeader("From", emailer)
